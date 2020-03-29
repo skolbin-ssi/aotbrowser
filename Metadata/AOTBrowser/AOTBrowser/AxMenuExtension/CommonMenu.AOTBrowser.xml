@@ -11,6 +11,21 @@
 				<MenuItemName>ARBAOTBrowser</MenuItemName>
 			</MenuElement>
 		</AxMenuExtensionElement>
+		<AxMenuExtensionElement xmlns="">
+			<PositionType>Begin</PositionType>
+			<MenuElement xmlns=""
+				i:type="AxMenuElementSubMenu">
+				<Name>Workspaces</Name>
+				<Label>@SYS:Platform_Menu_ColHeading_Workspaces</Label>
+				<Elements>
+					<AxMenuElement xmlns=""
+						i:type="AxMenuElementTile">
+						<Name>ARBAOTBrowserTile</Name>
+						<Tile>ARBAOTBrowserTile</Tile>
+					</AxMenuElement>
+				</Elements>
+			</MenuElement>
+		</AxMenuExtensionElement>
 	</Elements>
 	<MenuElementModifications />
 	<PropertyModifications />

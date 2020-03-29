@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AxClass xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+	<Name>ARBAOTObjectTreeForm</Name>
+	<SourceCode>
+		<Declaration><![CDATA[
+using Xpp = Microsoft.Dynamics.Ax.Xpp;
+using ArbelaXpp = Arbela.Dynamics.Ax.Xpp;
+using Microsoft.Dynamics.AX.Metadata.MetaModel;
+using CoreMetaModel = Microsoft.Dynamics.AX.Metadata.Core.MetaModel;
+
+/// <summary>
+/// Override the Object Tree for Forms
+/// </summary>
+[ARBAOTObjectType(ARBAOTObjectType::Form)]
+class ARBAOTObjectTreeForm extends ARBAOTObjectTree
+{
+    Map controlMap = new Map(Types::String, Types::Integer);
+    str selectedControlName;
+
+}
+]]></Declaration>
+		<Methods>
+			<Method>
+				<Name>parmSelectedControl</Name>
+				<Source><![CDATA[
+    public str parmSelectedControl(str _selectedControlName = selectedControlName)
+    {
+        selectedControlName = _selectedControlName;
+
+        return selectedControlName;
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>update</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Update the object tree
+    /// </summary>
+    /// <param name = "_aotNodeName">The name of the AOT object</param>
+    public void update(TreeNodeName _aotNodeName)
+    {
+        super(_aotNodeName);
+
+        if (selectedControlName && controlMap.exists(selectedControlName))
+        {
+            treeControl.select(controlMap.lookup(selectedControlName));
+        }
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>addExtensionCollection</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a collection of extensions to the tree
+    /// </summary>
+    /// <param name = "_collection">The collection to add</param>
+    /// <param name = "_collectionName">The collection name</param>
+    /// <param name = "_extensionName">The extension name</param>
+    protected void addExtensionCollection(System.Collections.IEnumerable _collection, str _collectionName, str _extensionName)
+    {
+        System.Collections.IEnumerator modsEnum;
+        switch (_collectionName)
+        {
+            case ARBAOTBrowserConstants::Controls:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.moveNext())
+                {
+                    AxFormExtensionControl controlExt = modsEnum.Current;
+                    TreeItemIdx parentIdx = controlMap.lookup(controlExt.Parent);
+                    TreeItemIdx afterIdx;
+                    if (controlExt.PositionType == CoreMetaModel.ExtensionItemPositionType::AfterItem)
+                    {
+                        afterIdx = SysFormTreeControl::findInsertAfterIdx(treeControl, parentIdx, controlExt.PreviousSibling);
+                    }
+                    currentMap = controlMap;
+                    this.addExtension(controlExt.FormControl, parentIdx, _extensionName, controlExt.PositionType, afterIdx);
+                    currentMap = null;
+                }
+                break;
+            default:
+                super(_collection, _collectionName, _extensionName);
+                break;
+        }
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>addTreeNode</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a new node to the tree
+    /// </summary>
+    /// <param name = "_object">The object to add</param>
+    /// <param name = "_idx">The tree index to add it under</param>
+    /// <param name = "_formTreeAdd">The order it should add the node</param>
+    /// <param name = "extensionName">The name of the extension it came from, if any</param>
+    /// <returns>The tree index of the new node</returns>
+    public TreeItemIdx addTreeNode(anytype _object, TreeItemIdx _idx, int _formTreeAdd = FormTreeAdd::Sort, boolean _skipAddHeader = false, str _extensionName = '')
+    {
+        if (_object == null)
+        {
+            return 0;
+        }
+
+        str objectName = this.getObjectName(_object);
+        boolean insertIntoMap = false;
+        if (_object is AxFormDesign)
+        {
+            insertIntoMap = true;
+            currentMap = controlMap;
+            collectionMap.insert(ARBAOTBrowserConstants::Controls, controlMap);
+        }
+
+        TreeItemIdx parentIdx = super(_object, _idx, _formTreeAdd, _skipAddHeader, _extensionName);
+
+        if (insertIntoMap)
+        {
+            currentMap = null;
+        }
+
+        if (currentMap != null
+            && (_object is AxFormControl))
+        {
+            currentMap.insert(objectName, parentIdx);
+        }
+
+        return parentIdx;
+    }
+
+]]></Source>
+			</Method>
+		</Methods>
+	</SourceCode>
+</AxClass>

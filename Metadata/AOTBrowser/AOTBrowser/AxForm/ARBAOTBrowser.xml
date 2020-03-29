@@ -18,12 +18,145 @@ using System.Linq.Enumerable;
 [Form]
 public class ARBAOTBrowser extends FormRun
 {
-    ARBAOTObjectType objectType;
-    TreeNodeName aotNodeName;
+    const str PropertiesMatrixGridName = 'PropertiesMatrixGrid';
     FormGridControl propertiesMatrixGrid;
+    boolean extensionsInline;
+    Map matrixControlMap;
+    boolean showCode;
+    ARBAOTObjectTree aotObjectTree;
 
+    #define.CurrentVersion(2)
+    #localmacro.CurrentList
+        extensionsInline,
+        showCode
+    #endmacro
 
 }
+]]></Source>
+			</Method>
+			<Method>
+				<Name>lastValueUserId</Name>
+				<Source><![CDATA[
+    private UserId lastValueUserId()
+    {
+        return curUserId();
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>lastValueType</Name>
+				<Source><![CDATA[
+    private UtilElementType lastValueType()
+    {
+        return UtilElementType::Form;
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>lastValueElementName</Name>
+				<Source><![CDATA[
+    private IdentifierName lastValueElementName()
+    {
+        return this.name();
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>lastValueDesignName</Name>
+				<Source><![CDATA[
+    private IdentifierName lastValueDesignName()
+    {
+        // Unique key: (user, company, type, elementName, designName)
+        // We don't have such a need to save different sets of the form data.
+        return '';
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>lastValueDataAreaId</Name>
+				<Source><![CDATA[
+    DataAreaId lastValueDataAreaId()
+    {
+        return curext();
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>initParmDefault</Name>
+				<Source><![CDATA[
+    void initParmDefault()
+    {
+        // Don't need to initialize any of the controls.
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>pack</Name>
+				<Source><![CDATA[
+    public container pack()
+    {
+        this.getControlValuesForSysLastValues();
+        return [#CurrentVersion, #CurrentList];
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>unpack</Name>
+				<Source><![CDATA[
+    public boolean unpack(container packedClass)
+    {
+        Integer version = conPeek(packedClass, 1);
+        switch (version)
+        {
+            case #CurrentVersion:
+                [version, #CurrentList] = packedClass;
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>close</Name>
+				<Source><![CDATA[
+    public void close()
+    {
+        xSysLastValue::saveLast(this);
+        super();
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>getControlValuesForSysLastValues</Name>
+				<Source><![CDATA[
+    void getControlValuesForSysLastValues()
+    {
+        extensionsInline = ExtensionViewToggle.toggleValue();
+        showCode = ViewCodeToggle.toggleValue();
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>setControlValuesFromSysLastValues</Name>
+				<Source><![CDATA[
+    void setControlValuesFromSysLastValues()
+    {
+        ExtensionViewToggle.toggleValue(extensionsInline);
+        ViewCodeToggle.toggleValue(showCode);
+    }
+
 ]]></Source>
 			</Method>
 			<Method>
@@ -41,771 +174,31 @@ public class ARBAOTBrowser extends FormRun
 				<Source><![CDATA[
     public void updateControls(ARBAOTObjectType _objectType, TreeNodeName _aotNodeName)
     {
-        objectType = _objectType;
-        aotNodeName = _aotNodeName;
-
         ResourceImageGroup.visible(false);
 
         boolean tableBrowserEnabled = false;
         switch (_objectType)
         {
-            case ARBAOTObjectType::Table:
-                this.updateTableControls(_aotNodeName);
-                tableBrowserEnabled = true;
-                break;
-            case ARBAOTObjectType::View:
-                this.updateViewControls(_aotNodeName);
-                tableBrowserEnabled = true;
-                break;
-            case ARBAOTObjectType::BaseEnum:
-                this.updateEnumControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::ExtendedDataType:
-                this.updateEdtControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::DataEntity:
-                this.updateDataEntityControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Class:
-                this.updateClassControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Form:
-                this.updateFormControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Query:
-                this.updateQueryControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Map:
-                this.updateMapControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Tile:
-                this.updateTileControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Menu:
-                this.updateMenuControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::TableCollection:
-                this.updateTableCollectionControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::CompositeDataEntity:
-                this.updateCompositeDataEntityControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::MenuItemDisplay:
-                this.updateMenuItemDisplayControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::MenuItemAction:
-                this.updateMenuItemActionControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::MenuItemOutput:
-                this.updateMenuItemOutputControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::SecurityRole:
-                this.updateSecurityRoleControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::SecurityDuty:
-                this.updateSecurityDutyControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::SecurityPrivilege:
-                this.updateSecurityPrivilegeControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::AggregateDataEntity:
-                this.updateAggregateDataEntityControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowCategory:
-                this.updateWorkflowCategoryControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowApproval:
-                this.updateWorkflowApprovalControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowTask:
-                this.updateWorkflowTaskControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowAutomatedTask:
-                this.updateWorkflowAutomatedTaskControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowType:
-                this.updateWorkflowTypeControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowHierarchyAssignmentProvider:
-                this.updateWorkflowHierarchyProviderControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowParticipantAssignmentProvider:
-                this.updateWorkflowParticipantProviderControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowQueueAssignmentProvider:
-                this.updateWorkflowQueueProviderControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::WorkflowDueDateCalculationProvider:
-                this.updateWorkflowDueDateCalcProviderControls(_aotNodeName);
-                break;
             case ARBAOTObjectType::Resource:
-                this.updateResourceControls(_aotNodeName);
+                ResourceImage.normalImage(_aotNodeName);
+                ResourceImageGroup.visible(true);
                 break;
-            case ARBAOTObjectType::LicenseCode:
-                this.updateLicenseCodeControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::ConfigKey:
-                this.updateConfigKeyControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::ConfigKeyGroup:
-                this.updateConfigKeyGroupControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Service:
-                this.updateServiceControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::ServiceGroup:
-                this.updateServiceGroupControls(_aotNodeName);
-                break;
-            case ARBAOTObjectType::Report:
-                this.updateReportControls(_aotNodeName);
-                break;
+            case ARBAOTObjectType::Table:
+            case ARBAOTObjectType::View:
+                tableBrowserEnabled = true;
         }
+
+        aotObjectTree = ARBAOTObjectTree::newFromAOTObject(ObjectTree, _objectType, ExtensionViewToggle.toggleValue());
+        if (element.args().parmObject() != null
+            && aotObjectTree is ARBAOTObjectTreeForm)
+        {
+            ARBAOTObjectTreeForm objectTreeForm = aotObjectTree as ARBAOTObjectTreeForm;
+            FormControl selectedControl = element.args().parmObject() as FormControl;
+            objectTreeForm.parmSelectedControl(selectedControl.name());
+        }
+        aotObjectTree.update(_aotNodeName);
+        DetailsTab.caption(_aotNodeName + ' - ' + enum2Str(_objectType));
         ARBOpenTableBrowser.enabled(tableBrowserEnabled);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateTableControls</Name>
-				<Source><![CDATA[
-    public void updateTableControls(TreeNodeName _aotNodeName)
-    {        
-        AxTable table = Xpp.MetadataSupport::GetTable(_aotNodeName);
-        if (table != null)
-        {
-            TreeItemIdx rootIdx = this.updateObjectTree(table, table.Name);
-            var tableExtensions = Xpp.MetadataSupport::GetTableExtensionsForTable(_aotNodeName);
-            System.Collections.IEnumerator enumerator = tableExtensions.GetEnumerator();
-
-            TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, tableExtensions, 0, true);
-            while (enumerator.moveNext())
-            {
-                this.addTreeNode(enumerator.Current, extensionsIdx);
-            }
-            TableTab.caption(table.Name + ' - ' + enum2Str(objectType));
-            this.updatePropertiesGroup(table);
-        }
-        else
-        {
-            objectType = ARBAOTObjectType::View;
-            this.updateViewControls(_aotNodeName);
-        }
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateEnumControls</Name>
-				<Source><![CDATA[
-    public void updateEnumControls(TreeNodeName _aotNodeName)
-    {
-        
-        AxEnum enum = Xpp.MetadataSupport::GetEnum(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(enum, enum.Name);
-        var enumExtensions = ArbelaXpp.MetadataSupport::GetEnumExtensionsForEnum(_aotNodeName);
-        System.Collections.IEnumerator enumerator = enumExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, enumExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(enum.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(enum);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateEdtControls</Name>
-				<Source><![CDATA[
-    public void updateEdtControls(TreeNodeName _aotNodeName)
-    {
-        
-        AxEdt edt = Xpp.MetadataSupport::GetEdt(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(edt, edt.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetEdtExtensionsForEdt(_aotNodeName);
-        System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(edt.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(edt);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateDataEntityControls</Name>
-				<Source><![CDATA[
-    public void updateDataEntityControls(TreeNodeName _aotNodeName)
-    {
-        AxDataEntityView dataEntityView = Xpp.MetadataSupport::GetDataEntityView(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(dataEntityView, dataEntityView.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetDataEntityViewExtensionsForDataEntityView(_aotNodeName);
-        System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(dataEntityView.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(dataEntityView);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateClassControls</Name>
-				<Source><![CDATA[
-    public void updateClassControls(TreeNodeName _aotNodeName)
-    {
-        AxClass axClass = Xpp.MetadataSupport::GetClass(_aotNodeName);
-        this.updateObjectTree(axClass, axClass.Name);
-
-        TableTab.caption(axClass.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axClass);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateFormControls</Name>
-				<Source><![CDATA[
-    public void updateFormControls(TreeNodeName _aotNodeName)
-    {
-        AxForm axform = Xpp.MetadataSupport::GetForm(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axform, axform.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetFormExtensionsForForm(_aotNodeName);
-        var formExtensionsEnum = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (formExtensionsEnum.moveNext())
-        {
-            this.addTreeNode(formExtensionsEnum.Current, extensionsIdx);
-        }
-        TableTab.caption(axform.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axform);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateQueryControls</Name>
-				<Source><![CDATA[
-    public void updateQueryControls(TreeNodeName _aotNodeName)
-    {
-        AxQuery axQuery = Xpp.MetadataSupport::GetQuery(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axQuery, axQuery.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetQueryExtensionsForQuery(_aotNodeName);
-        var enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axQuery.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axQuery);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateMapControls</Name>
-				<Source><![CDATA[
-    public void updateMapControls(TreeNodeName _aotNodeName)
-    {
-        AxMap map = Xpp.MetadataSupport::GetMap(_aotNodeName);
-        this.updateObjectTree(map, map.Name);
-        TableTab.caption(map.Name);
-        this.updatePropertiesGroup(map);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateViewControls</Name>
-				<Source><![CDATA[
-    public void updateViewControls(TreeNodeName _aotNodeName)
-    {
-        
-        AxView view = Xpp.MetadataSupport::GetView(_aotNodeName);
-        if (view != null)
-        {
-            TreeItemIdx rootIdx = this.updateObjectTree(view, view.Name);
-            var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetViewExtensionsForView(_aotNodeName);
-            System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-            TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-            while (enumerator.moveNext())
-            {
-                this.addTreeNode(enumerator.Current, extensionsIdx);
-            }
-            TableTab.caption(view.Name + ' - ' + enum2Str(objectType));
-            this.updatePropertiesGroup(view);
-        }
-        else
-        {
-            objectType = ARBAOTObjectType::DataEntity;
-            this.updateDataEntityControls(_aotNodeName);
-        }
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateMenuControls</Name>
-				<Source><![CDATA[
-    public void updateMenuControls(TreeNodeName _aotNodeName)
-    {
-        AxMenu axMenu = Xpp.MetadataSupport::GetMenu(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axMenu, axMenu.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetMenuExtensionsForMenu(_aotNodeName);
-        System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axMenu.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axMenu);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateTileControls</Name>
-				<Source><![CDATA[
-    public void updateTileControls(TreeNodeName _aotNodeName)
-    {
-        AxTile tile = Xpp.MetadataSupport::GetTile(_aotNodeName);
-        this.updateObjectTree(tile, tile.Name);
-
-        TableTab.caption(tile.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(tile);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateTableCollectionControls</Name>
-				<Source><![CDATA[
-    public void updateTableCollectionControls(TreeNodeName _aotNodeName)
-    {
-        AxTableCollection tableCollection = ArbelaXpp.MetadataSupport::GetTableCollection(_aotNodeName);
-        this.updateObjectTree(tableCollection, tableCollection.Name);
-
-        TableTab.caption(tableCollection.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(tableCollection);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateCompositeDataEntityControls</Name>
-				<Source><![CDATA[
-    public void updateCompositeDataEntityControls(TreeNodeName _aotNodeName)
-    {
-        AxCompositeDataEntityView compositeDataEntity = ArbelaXpp.MetadataSupport::GetCompositeDataEntity(_aotNodeName);
-        this.updateObjectTree(compositeDataEntity, compositeDataEntity.Name);
-
-        TableTab.caption(compositeDataEntity.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(compositeDataEntity);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateAggregateDataEntityControls</Name>
-				<Source><![CDATA[
-    public void updateAggregateDataEntityControls(TreeNodeName _aotNodeName)
-    {
-        AxAggregateDataEntity aggregateDataEntity = Xpp.MetadataSupport::GetAggregateDataEntity(_aotNodeName);
-        this.updateObjectTree(aggregateDataEntity, aggregateDataEntity.Name);
-
-        TableTab.caption(aggregateDataEntity.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aggregateDataEntity);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateMenuItemDisplayControls</Name>
-				<Source><![CDATA[
-    public void updateMenuItemDisplayControls(TreeNodeName _aotNodeName)
-    {
-        AxMenuItemDisplay axMenuItem = Xpp.MetadataSupport::GetMenuItemDisplay(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axMenuItem, axMenuItem.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetMenuItemDisplayExtensionsForMenuItemDisplay(_aotNodeName);
-        var enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axMenuItem.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axMenuItem);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateMenuItemActionControls</Name>
-				<Source><![CDATA[
-    public void updateMenuItemActionControls(TreeNodeName _aotNodeName)
-    {
-        AxMenuItemAction axMenuItem = Xpp.MetadataSupport::GetMenuItemAction(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axMenuItem, axMenuItem.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetMenuItemActionExtensionsForMenuItemAction(_aotNodeName);
-        var enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axMenuItem.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axMenuItem);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateMenuItemOutputControls</Name>
-				<Source><![CDATA[
-    public void updateMenuItemOutputControls(TreeNodeName _aotNodeName)
-    {
-        AxMenuItemOutput axMenuItem = Xpp.MetadataSupport::GetMenuItemOutput(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axMenuItem, axMenuItem.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetMenuItemOutputExtensionsForMenuItemOutput(_aotNodeName);
-        var enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axMenuItem.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axMenuItem);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateSecurityRoleControls</Name>
-				<Source><![CDATA[
-    public void updateSecurityRoleControls(TreeNodeName _aotNodeName)
-    {
-        AxSecurityRole axSecurityRole = Xpp.MetadataSupport::GetSecurityRole(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axSecurityRole, axSecurityRole.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetSecurityRoleExtensionsForSecurityRole(_aotNodeName);
-        System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axSecurityRole.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axSecurityRole);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateSecurityDutyControls</Name>
-				<Source><![CDATA[
-    public void updateSecurityDutyControls(TreeNodeName _aotNodeName)
-    {
-        AxSecurityDuty axSecurityDuty = ArbelaXpp.MetadataSupport::GetSecurityDuty(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(axSecurityDuty, axSecurityDuty.Name);
-        var extensions = ArbelaXpp.MetadataSupport::GetSecurityDutyExtensionsForSecurityDuty(_aotNodeName);
-        System.Collections.IEnumerator enumerator = extensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, extensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(axSecurityDuty.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axSecurityDuty);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateSecurityPrivilegeControls</Name>
-				<Source><![CDATA[
-    public void updateSecurityPrivilegeControls(TreeNodeName _aotNodeName)
-    {
-        AxSecurityPrivilege axSecurityPrivilege = ArbelaXpp.MetadataSupport::GetSecurityPrivilege(_aotNodeName);
-        this.updateObjectTree(axSecurityPrivilege, axSecurityPrivilege.Name);
-
-        TableTab.caption(axSecurityPrivilege.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(axSecurityPrivilege);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowCategoryControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowCategoryControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowCategory(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowApprovalControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowApprovalControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowApproval(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-        // Current support for this starts in PU29
-        //var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetWorkflowApprovalExtensionsForWorkflowApproval(_aotNodeName);
-        //System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        //TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        //while (enumerator.moveNext())
-        //{
-        //    this.addTreeNode(enumerator.Current, extensionsIdx);
-        //}
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowTaskControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowTaskControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowTask(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-        // Current support for this starts in PU29
-        //var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetWorkflowTaskExtensionsForWorkflowTask(_aotNodeName);
-        //System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        //TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        //while (enumerator.moveNext())
-        //{
-        //    this.addTreeNode(enumerator.Current, extensionsIdx);
-        //}
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowAutomatedTaskControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowAutomatedTaskControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowAutomatedTask(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowTypeControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowTypeControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowTemplate(_aotNodeName);
-        TreeItemIdx rootIdx = this.updateObjectTree(aotObject, aotObject.Name);
-        var aotObjectExtensions = ArbelaXpp.MetadataSupport::GetWorkflowTemplateExtensionsForWorkflowTemplate(_aotNodeName);
-        System.Collections.IEnumerator enumerator = aotObjectExtensions.GetEnumerator();
-
-        TreeItemIdx extensionsIdx = SysFormTreeControl::addTreeItem(TableTree, 'Extensions', rootIdx, aotObjectExtensions, 0, true);
-        while (enumerator.moveNext())
-        {
-            this.addTreeNode(enumerator.Current, extensionsIdx);
-        }
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowHierarchyProviderControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowHierarchyProviderControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowHierarchyAssignmentProvider(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowParticipantProviderControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowParticipantProviderControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowParticipantAssignmentProvider(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowQueueProviderControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowQueueProviderControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowQueueAssignmentProvider(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateWorkflowDueDateCalcProviderControls</Name>
-				<Source><![CDATA[
-    public void updateWorkflowDueDateCalcProviderControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetWorkflowDueDateCalculationProvider(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateResourceControls</Name>
-				<Source><![CDATA[
-    public void updateResourceControls(TreeNodeName _aotNodeName)
-    {
-        AxResource aotObject = Xpp.MetadataSupport::GetResource(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-        
-        if (aotObject.TypeOfResource == Microsoft.Dynamics.AX.Metadata.Core.MetaModel.ResourceType::Images)
-        {
-            ResourceImage.imageLocation(SysImageLocation::AOTResource);
-            ResourceImage.normalImage(_aotNodeName);
-            ResourceImageGroup.colorScheme(FormColorScheme::RGB);
-            ResourceImageGroup.backgroundColor(WinAPI::RGB2int(220,220,220));
-            ResourceImageGroup.visible(true);
-        }
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateLicenseCodeControls</Name>
-				<Source><![CDATA[
-    public void updateLicenseCodeControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetLicenseCode(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateConfigKeyControls</Name>
-				<Source><![CDATA[
-    public void updateConfigKeyControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetConfigurationKey(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateConfigKeyGroupControls</Name>
-				<Source><![CDATA[
-    public void updateConfigKeyGroupControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetConfigurationKeyGroup(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateServiceControls</Name>
-				<Source><![CDATA[
-    public void updateServiceControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = ArbelaXpp.MetadataSupport::GetService(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateServiceGroupControls</Name>
-				<Source><![CDATA[
-    public void updateServiceGroupControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = ArbelaXpp.MetadataSupport::GetServiceGroup(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>updateReportControls</Name>
-				<Source><![CDATA[
-    public void updateReportControls(TreeNodeName _aotNodeName)
-    {
-        var aotObject = Xpp.MetadataSupport::GetReport(_aotNodeName);
-        this.updateObjectTree(aotObject, aotObject.Name);
-
-        TableTab.caption(aotObject.Name + ' - ' + enum2Str(objectType));
-        this.updatePropertiesGroup(aotObject);
     }
 
 ]]></Source>
@@ -823,7 +216,7 @@ public class ARBAOTBrowser extends FormRun
 
         if (_recreate)
         {
-            propertiesMatrixGrid = TableDetailsPropertiesGroup.addControl(FormControlType::Grid, 'PropertiesMatrixGrid');
+            propertiesMatrixGrid = DetailsDetailsPropertiesGroup.addControl(FormControlType::Grid, PropertiesMatrixGridName);
             propertiesMatrixGrid.dataSource(ARBAOTObjectPropertiesMatrix_ds.id());
             propertiesMatrixGrid.widthMode(FormWidth::ColumnWidth);
             propertiesMatrixGrid.heightMode(FormHeight::ColumnHeight);
@@ -831,16 +224,17 @@ public class ARBAOTBrowser extends FormRun
         }
 
         // This is to make the table scroll correctly
-        TableTab.widthMode(FormWidth::ColumnWidth);
-        TableTab.heightMode(FormHeight::ColumnHeight);
-        TableBodyGroup.widthMode(FormWidth::ColumnWidth);
-        TableBodyGroup.heightMode(FormHeight::ColumnHeight);
-        TableDetailsGroup.widthMode(FormWidth::ColumnWidth);
-        TableDetailsGroup.heightMode(FormHeight::ColumnHeight);
-        TableDetailsPropertiesGroup.widthMode(FormWidth::ColumnWidth);
-        TableDetailsPropertiesGroup.heightMode(FormHeight::ColumnHeight);
+        DetailsTab.widthMode(FormWidth::ColumnWidth);
+        DetailsTab.heightMode(FormHeight::ColumnHeight);
+        DetailsBodyGroup.widthMode(FormWidth::ColumnWidth);
+        DetailsBodyGroup.heightMode(FormHeight::ColumnHeight);
+        DetailsDetailsGroup.widthMode(FormWidth::ColumnWidth);
+        DetailsDetailsGroup.heightMode(FormHeight::ColumnHeight);
+        DetailsDetailsPropertiesGroup.widthMode(FormWidth::ColumnWidth);
+        DetailsDetailsPropertiesGroup.heightMode(FormHeight::ColumnHeight);
         PropertiesGrid.widthMode(FormWidth::ColumnWidth);
         PropertiesGrid.heightMode(FormHeight::ColumnHeight);
+        matrixControlMap = new Map(Types::String, Types::Integer);
     }
 
 ]]></Source>
@@ -850,109 +244,235 @@ public class ARBAOTBrowser extends FormRun
 				<Source><![CDATA[
     public void updatePropertiesGroup(anytype _object)
     {
+        Map propMap = new Map(Types::String, Types::Integer);
+        int nextArrayNum = 1;
+        FormStringControl previousControl;
+
+        void addObjectToMatrix(anytype objectLocal, boolean setModified)
+        {
+            System.Type t = objectLocal.GetType();
+            PropertyInfo nameProp = t.GetProperty(ARBAOTBrowserConstants::Name);
+            str name;
+            if (nameProp != null)
+            {
+                name = nameProp.GetValue(objectLocal).ToString();
+            }
+            ARBAOTObjectPropertiesMatrix.clear();
+            ARBAOTObjectPropertiesMatrix.TypeName = name;
+
+            var props = t.GetProperties();
+            for (int i = 0; i < props.Length; i++)
+            {
+                PropertyInfo prop = props.GetValue(i);
+                if (((prop.GetValue(objectLocal) is System.String) ||
+                            (!(prop.GetValue(objectLocal) is System.Collections.IEnumerable)
+                                && prop.PropertyType.Name != ARBAOTBrowserConstants::AxPropertyCollection
+                                && prop.PropertyType.Name != ARBAOTBrowserConstants::AxFormPropertyCollection))
+                            && prop.Name != ARBAOTBrowserConstants::CompilerMetadata
+                            && prop.Name != ARBAOTBrowserConstants::Design
+                            && prop.Name != ARBAOTBrowserConstants::FormControl)
+                {
+                    int arrayNum;
+                    if (propMap.exists(prop.Name))
+                    {
+                        arrayNum = propMap.lookup(prop.Name);
+                    }
+                    if (arrayNum == 0)
+                    {
+                        arrayNum = nextArrayNum;
+
+                        if (arrayNum > 100)
+                        {
+                            continue;
+                        }
+
+                        nextArrayNum++;
+                        propMap.insert(prop.Name, arrayNum);
+                        previousControl = propertiesMatrixGrid.addDataField(ARBAOTObjectPropertiesMatrix_ds.id(), fieldNum(ARBAOTObjectPropertiesMatrix, Property), previousControl, arrayNum);
+                        matrixControlMap.insert(strFmt('%1;%2', fieldNum(ARBAOTObjectPropertiesMatrix, Property), arrayNum), previousControl.id());
+                        previousControl.label(prop.Name);
+                    }
+
+                    if (prop.Name == ARBAOTBrowserConstants::Label
+                        || prop.Name == ARBAOTBrowserConstants::HelpText)
+                    {
+                        ARBAOTObjectPropertiesMatrix.Property[arrayNum] = this.getLabelValue(prop, objectLocal);
+                    }
+                    else
+                    {
+                        ARBAOTObjectPropertiesMatrix.Property[arrayNum] = this.getPropertyValue(prop, objectLocal);
+                    }
+                }
+            }
+            if (setModified)
+            {
+                ARBAOTObjectPropertiesMatrix.Modified = NoYes::Yes;
+            }
+            ARBAOTObjectPropertiesMatrix.insert();
+        }
+
+        CodeViewerGroup.visible(false);
+        CodeViewer.parmHtml('');
         delete_from ARBAOTObjectProperties;
         delete_from ARBAOTObjectPropertiesMatrix;
         
         if (!(typeOf(_object) == Types::String) && !(_object is System.String))
         {
-            if (_object is System.Collections.IEnumerable)
+            if (_object is System.Collections.IEnumerable
+                || _object is ARBObjectExtension)
             {
                 element.clearPropertiesMatrix(true);
-                var enumerable = _object as System.Collections.IEnumerable;
+                System.Collections.IEnumerable enumerable;
+                ARBObjectExtension objectExtension = _object as ARBObjectExtension;
+                if (objectExtension == null)
+                {
+                    enumerable = _object as System.Collections.IEnumerable;
+                }
+                else
+                {
+                    enumerable = objectExtension.Object as System.Collections.IEnumerable;
+                }
                 PropertiesGrid.visible(false);
                 System.Collections.IEnumerator enumerator = enumerable.GetEnumerator();
-                Map propMap = new Map(Types::String, Types::Integer);
-                int nextArrayNum = 1;
-                FormStringControl previousControl = propertiesMatrixGrid.addDataField(ARBAOTObjectPropertiesMatrix_ds.id(), fieldNum(ARBAOTObjectPropertiesMatrix, TypeName));
+                
+                
+                previousControl = propertiesMatrixGrid.addDataField(ARBAOTObjectPropertiesMatrix_ds.id(), fieldNum(ARBAOTObjectPropertiesMatrix, TypeName));
+                matrixControlMap.insert(strFmt('%1;%2', fieldNum(ARBAOTObjectPropertiesMatrix, TypeName), 0), previousControl.id());
                 while (enumerator.moveNext())
                 {
-                    anytype object = enumerator.Current;
-                    System.Type t = object.GetType();
-                    PropertyInfo nameProp = t.GetProperty('Name');
-                    str name;
-                    if (nameProp != null)
-                    {
-                        name = nameProp.GetValue(object).ToString();
-                    }
-                    ARBAOTObjectPropertiesMatrix.clear();
-                    ARBAOTObjectPropertiesMatrix.TypeName = name;
+                    addObjectToMatrix(enumerator.Current, false);
+                }
 
-                    var props = t.GetProperties();
-                    for (int i = 0; i < props.Length; i++)
+                if (objectExtension != null)
+                {
+                    ListEnumerator extEnum = objectExtension.Extensions.getEnumerator();
+                    while (extEnum.moveNext())
                     {
-                        PropertyInfo prop = props.GetValue(i);
-                        if (((prop.GetValue(object) is System.String) ||
-                            (!(prop.GetValue(object) is System.Collections.IEnumerable)
-                                && prop.PropertyType.Name != 'AxPropertyCollection'
-                                && prop.PropertyType.Name != 'AxFormPropertyCollection'))
-                            && prop.Name != 'CompilerMetadata')
+                        addObjectToMatrix(extEnum.current(), true);
+                    }
+
+                    MapEnumerator modsEnum = objectExtension.Modifications.getEnumerator();
+                    while (modsEnum.MoveNext())
+                    {
+                        AxExtensionModification modification = modsEnum.currentValue();
+                        ARBAOTObjectPropertiesMatrix::find(ARBAOTObjectPropertiesMatrix, modsEnum.currentKey(), true);
+
+                        var propModsEnum = modification.PropertyModifications.GetEnumerator();
+                        while (propModsEnum.MoveNext())
                         {
-                            int arrayNum;
-                            if (propMap.exists(prop.Name))
-                            {
-                                arrayNum = propMap.lookup(prop.Name);
-                            }
-                            if (arrayNum == 0)
-                            {
-                                arrayNum = nextArrayNum;
-
-                                if (arrayNum > 100)
-                                {
-                                    continue;
-                                }
-
-                                nextArrayNum++;
-                                propMap.insert(prop.Name, arrayNum);
-                                previousControl = propertiesMatrixGrid.addDataField(ARBAOTObjectPropertiesMatrix_ds.id(), fieldNum(ARBAOTObjectPropertiesMatrix, Property), previousControl, arrayNum);
-                                previousControl.label(prop.Name);
-                            }
-
-                            if (prop.Name == 'ReturnType')
-                            {
-                                AxMethodReturnType returnType = prop.GetValue(object);
-                                ARBAOTObjectPropertiesMatrix.Property[arrayNum] = returnType.Type.ToString() + ' - ' + returnType.TypeName;
-                            }
-                            else
-                            {
-                                ARBAOTObjectPropertiesMatrix.Property[arrayNum] = prop.Name == 'Label' || prop.Name == 'Description' || prop.Name == 'HelpText' || prop.Name == 'DeveloperDocumentation' || prop.Name == 'EntityRelationshipRole' ? SysLabel::labelId2String(prop.GetValue(object).ToString()) : (prop.GetValue(object) == null ? '' : prop.GetValue(object).ToString());
-                            }
+                            AxPropertyModification propMod = propModsEnum.Current;
+                            ttsbegin;
+                            int arrayNum = propMap.lookup(propMod.Name);
+                            ARBAOTObjectPropertiesMatrix.Property[arrayNum] = propMod.Value;
+                            ARBAOTObjectPropertiesMatrix.PropertyModified[arrayNum] = NoYes::Yes;
+                            
+                            ttscommit;
                         }
+                        ARBAOTObjectPropertiesMatrix.update();
                     }
-                    ARBAOTObjectPropertiesMatrix.insert();
+
                 }
 
                 propertiesMatrixGrid.visible(true);
-                
             }
             else
             {
                 element.clearPropertiesMatrix();
-                System.Type t = _object.GetType();
+
+                anytype object;
+                List modifications;
+                if (_object is ARBObjectModification)
+                {
+                    ARBObjectModification objectModification = _object;
+                    object = objectModification.Object;
+                    modifications = objectModification.Modifications;
+                }
+                else
+                {
+                    object = _object;
+                }
+
+                System.Type t = object.GetType();
        
                 var props = t.GetProperties();
                 for (int i = 0; i < props.Length; i++)
                 {
                     PropertyInfo prop = props.GetValue(i);
-                    if (((prop.GetValue(_object) is System.String) ||
-                        (!(prop.GetValue(_object) is System.Collections.IEnumerable)
-                            && prop.PropertyType.Name != 'AxPropertyCollection'
-                            && prop.PropertyType.Name != 'AxFormPropertyCollection'))
-                    && prop.Name != 'CompilerMetadata')
+                    if (((prop.GetValue(object) is System.String) ||
+                        (!(prop.GetValue(object) is System.Collections.IEnumerable)
+                            && prop.PropertyType.Name != ARBAOTBrowserConstants::AxPropertyCollection
+                            && prop.PropertyType.Name != ARBAOTBrowserConstants::AxFormPropertyCollection))
+                        && prop.Name != ARBAOTBrowserConstants::CompilerMetadata
+                        && prop.Name != ARBAOTBrowserConstants::Design
+                        && prop.Name != ARBAOTBrowserConstants::FormControl)
                     {
-                        ARBAOTObjectProperties.clear();
-                        ARBAOTObjectProperties.Name = prop.Name;
-                        if (prop.Name == 'ReturnType')
+                        if (showCode && (prop.Name == ARBAOTBrowserConstants::Source || prop.Name == ARBAOTBrowserConstants::ClassDeclaration || prop.Name == ARBAOTBrowserConstants::Declaration))
                         {
-                            AxMethodReturnType returnType = prop.GetValue(_object);
-                            ARBAOTObjectProperties.Value = returnType.Type.ToString() + ' - ' + returnType.TypeName;
+                            CodeViewer.parmHtml(Arbela.Dynamics.AX.Xpp.Support.HtmlFormatHelper::Format(this.getPropertyValue(prop, object)));
+                            CodeViewerGroup.visible(true);
                         }
                         else
                         {
-                            ARBAOTObjectProperties.Value = prop.Name == 'Label' || prop.Name == 'Description' || prop.Name == 'HelpText' || prop.Name == 'DeveloperDocumentation' || prop.Name == 'EntityRelationshipRole' ? SysLabel::labelId2String(prop.GetValue(_object).ToString()) : (prop.GetValue(_object) == null ? '' : prop.GetValue(_object).ToString());
+                            ARBAOTObjectProperties.clear();
+                            ARBAOTObjectProperties.Name = prop.Name;
+                            if (prop.Name == ARBAOTBrowserConstants::Label
+                                || prop.Name == ARBAOTBrowserConstants::HelpText)
+                            {
+                                ARBAOTObjectProperties.Value = this.getLabelValue(prop, object);
+                            }
+                            else
+                            {
+                                ARBAOTObjectProperties.Value = this.getPropertyValue(prop, object);
+                            }
+                            ARBAOTObjectProperties.insert();
                         }
-                        ARBAOTObjectProperties.insert();
                     }
                 }
+
+                if (modifications != null)
+                {
+                    ListEnumerator modsEnum = modifications.getEnumerator();
+                    while (modsEnum.MoveNext())
+                    {
+                        AxExtensionModification modification = modsEnum.current();
+
+                        var propModsEnum = modification.PropertyModifications.GetEnumerator();
+                        while (propModsEnum.MoveNext())
+                        {
+                            AxPropertyModification propMod = propModsEnum.Current;
+                            ttsbegin;
+                            ARBAOTObjectProperties::find(ARBAOTObjectProperties, propMod.Name, true);
+                            if (_object is AxEnumValue && propMod.Name == 'Value')
+                            {
+                                anytype parent = ObjectTree.getItem(ObjectTree.getRoot()).data();
+                                ARBObjectModification objectMod = parent as ARBObjectModification;
+                                if (objectMod)
+                                {
+                                    parent = objectMod.Object;
+                                }
+                                AxEnum enum = parent as AxEnum;
+                                AxEnumValue enumValue = _object as AxEnumValue;
+                                ARBAOTObjectProperties.Value = int2Str(symbol2Enum(enumName2Id(enum.Name), enumValue.Name));
+                            }
+                            else
+                            {
+                                ARBAOTObjectProperties.Value = propMod.Value;
+                            }
+                            ARBAOTObjectProperties.Modified = NoYes::Yes;
+                            if (ARBAOTObjectProperties)
+                            {
+                                ARBAOTObjectProperties.update();
+                            }
+                            else
+                            {
+                                ARBAOTObjectProperties.Name = propMod.Name;
+                                ARBAOTObjectProperties.insert();
+                            }
+                            ttscommit;
+                        }
+                    }
+                }
+
                 PropertiesGrid.visible(true);
             }
         }
@@ -963,85 +483,140 @@ public class ARBAOTBrowser extends FormRun
         }
         ARBAOTObjectProperties_ds.executeQuery();
         ARBAOTObjectPropertiesMatrix_ds.executeQuery();
-
-        //element.reload();
     }
 
 ]]></Source>
 			</Method>
 			<Method>
-				<Name>updateObjectTree</Name>
+				<Name>getPropertyValue</Name>
 				<Source><![CDATA[
-    public TreeItemIdx updateObjectTree(anytype _object, str _rootNodeName)
+    protected str getPropertyValue(PropertyInfo _property, anytype _object)
     {
-        TableTree.deleteAll();
-
-        TreeItemIdx rootIdx = this.addTreeNode(_object, FormTreeAdd::Root);
-
-        SysFormTreeControl::expandTree(TableTree, rootIdx, 1);
-
-        return rootIdx;
-    }
-
-]]></Source>
-			</Method>
-			<Method>
-				<Name>addTreeNode</Name>
-				<Source><![CDATA[
-    public TreeItemIdx addTreeNode(anytype _object, TreeItemIdx _idx, FormTreeAdd _formTreeAdd = FormTreeAdd::Sort)
-    {
-        System.Type t = _object.GetType();
-        
-        var props = t.GetProperties();
-        PropertyInfo nameProp = t.GetProperty('Name');
-        str name;
-        if (nameProp != null)
+        str value;
+        if (_property.Name == ARBAOTBrowserConstants::ReturnType)
         {
-            name = nameProp.GetValue(_object).ToString();
+            AxMethodReturnType returnType = _property.GetValue(_object);
+            value = returnType.Type.ToString() + ' - ' + returnType.TypeName;
         }
-        else if (_object is AxTableMappingConnection)
+        else if (_object is AxEnumValue && _property.Name == 'Value')
         {
-            AxTableMappingConnection mapConn = _object as AxTableMappingConnection;
-            name = strFmt('%1 == %2', mapConn.MapField, mapConn.MapFieldTo);
+            anytype parent = ObjectTree.getItem(ObjectTree.getRoot()).data();
+            ARBObjectModification objectMod = parent as ARBObjectModification;
+            if (objectMod)
+            {
+                parent = objectMod.Object;
+            }
+            AxEnum enum = parent as AxEnum;
+            AxEnumValue enumValue = _object as AxEnumValue;
+            value = int2Str(symbol2Enum(enumName2Id(enum.Name), enumValue.Name));
         }
         else
         {
-            name = _object.ToString();
+            value = (_property.Name == ARBAOTBrowserConstants::Label
+                || _property.Name == ARBAOTBrowserConstants::Description
+                || _property.Name == ARBAOTBrowserConstants::HelpText
+                || _property.Name == ARBAOTBrowserConstants::DeveloperDocumentation
+                || _property.Name == ARBAOTBrowserConstants::EntityRelationshipRole)
+                ? SysLabel::labelId2String(_property.GetValue(_object).ToString())
+                : (_property.GetValue(_object) == null ? '' : _property.GetValue(_object).ToString());
         }
 
-        TreeItemIdx parentIdx = _idx;
-        if (name != 'FormDesign')
+        return value;
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>getLabelValue</Name>
+				<Source><![CDATA[
+    protected str getLabelValue(PropertyInfo _property, anytype _object)
+    {
+        str value = SysLabel::labelId2String(_property.GetValue(_object).ToString());
+
+        if (value == '')
         {
-            parentIdx = SysFormTreeControl::addTreeItem(TableTree, name, _idx, _object, 0, false, 0, _formTreeAdd);
-        }
-        for (int i = 0; i < props.Length; i++)
-        {
-            PropertyInfo prop = props.GetValue(i);
-            if (prop.PropertyType.Name != 'String'
-                && (prop.Name == 'ViewMetadata' || prop.Name == 'DataSource' || prop.Name == 'Design'))
+            if (_object is AxEdt && (_object as AxEdt).Extends != '')
             {
-                var propValue = prop.GetValue(_object);
-                TreeItemIdx idx = SysFormTreeControl::addTreeItem(TableTree, prop.Name, parentIdx, propValue, 0, true, 0, _formTreeAdd);
-                this.addTreeNode(propValue, idx, prop.Name == 'Design' ? FormTreeAdd::Last : _formTreeAdd);
-            }
-            else if (prop.PropertyType.Name == 'KeyedObjectCollection`1')
-            {
-                var col = prop.GetValue(_object) as System.Collections.IEnumerable;
-                TreeItemIdx idx = parentIdx;
-                if (prop.Name != 'Controls')
+                AxEdt edt = _object as AxEdt;
+                AxEdt extendsEdt = Xpp.MetadataSupport::GetEdt(edt.Extends);
+                if (extendsEdt != null)
                 {
-                    idx = SysFormTreeControl::addTreeItem(TableTree, prop.Name, parentIdx, col, 0, true, 0,_formTreeAdd);
-                }
-                System.Collections.IEnumerator enumerator = col.GetEnumerator();
-
-                while (enumerator.moveNext())
-                {
-                    this.addTreeNode(enumerator.Current, idx, _formTreeAdd);
+                    value = this.getLabelValue(extendsEdt.GetType().GetProperty(_property.Name), extendsEdt);
                 }
             }
+            else
+            {
+                System.Type t = _object.GetType();
+                PropertyInfo edtProp = t.GetProperty(ARBAOTBrowserConstants::ExtendedDataType);
+                if (edtProp != null && edtProp.GetValue(_object) != null && edtProp.GetValue(_object).ToString() != '')
+                {
+                    str edtName = edtProp.GetValue(_object).ToString();
+                    if (edtName != '')
+                    {
+                        AxEdt edt = Xpp.MetadataSupport::GetEdt(edtName);
+                        if (edt != null)
+                        {
+                            value = this.getLabelValue(edt.GetType().GetProperty(_property.Name), edt);
+                        }
+                    }
+                }
+                else
+                {
+                    PropertyInfo enumProp = t.GetProperty(ARBAOTBrowserConstants::EnumType);
+                    if (enumProp != null && enumProp.GetValue(_object) != null && enumProp.GetValue(_object).ToString() != '')
+                    {
+                        str enumName = enumProp.GetValue(_object).ToString();
+                        if (enumName != '')
+                        {
+                            AxEnum enum = Xpp.MetadataSupport::GetEnum(enumName);
+                            if (enum != null)
+                            {
+                                value = this.getLabelValue(enum.GetType().GetProperty(_property.Name), enum);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        PropertyInfo dataSourceProp = t.GetProperty(ARBAOTBrowserConstants::DataSource);
+                        if (dataSourceProp != null && dataSourceProp.GetValue(_object) != null)
+                        {
+                            str dataSourceName = dataSourceProp.GetValue(_object).ToString();
+                            PropertyInfo dataFieldProp = t.GetProperty(ARBAOTBrowserConstants::DataField);
+                            if (dataFieldProp != null && dataFieldProp.GetValue(_object) != null)
+                            {
+                                str dataFieldName = dataFieldProp.GetValue(_object).ToString();
+                                if (aotObjectTree.getCollectionMap().exists(ARBAOTBrowserConstants::DataSources))
+                                {
+                                    Map datasourcesMap = aotObjectTree.getCollectionMap().lookup(ARBAOTBrowserConstants::DataSources);
+                                    if (datasourcesMap.exists(dataSourceName))
+                                    {
+                                        anytype dataSource = ObjectTree.getItem(datasourcesMap.lookup(dataSourceName)).data();
+                                        System.Type datasourceType = dataSource.GetType();
+                                        PropertyInfo tableProp = datasourceType.GetProperty(ARBAOTBrowserConstants::Table);
+                                        str tableName = tableProp.GetValue(dataSource);
+                                        AxTableField tableField = Xpp.MetadataSupport::GetTableField(tableName, dataFieldName);
+                                        if (tableField != null)
+                                        {
+                                            value = this.getLabelValue(tableField.GetType().GetProperty(_property.Name), tableField);
+                                        }
+                                        else
+                                        {
+                                            AxViewField viewField = Xpp.MetadataSupport::GetViewField(tableName, dataFieldName);
+                                            if (viewField != null)
+                                            {
+                                                value = this.getLabelValue(viewField.GetType().GetProperty(_property.Name), viewField);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        return parentIdx;
+        return value;
     }
 
 ]]></Source>
@@ -1056,7 +631,48 @@ public class ARBAOTBrowser extends FormRun
     {
         super();
 
+        xSysLastValue::getLast(this);
+        this.setControlValuesFromSysLastValues();
+
+        Microsoft.Dynamics.ApplicationPlatform.Environment.IApplicationEnvironment applicationEnvironment = Microsoft.Dynamics.ApplicationPlatform.Environment.EnvironmentFactory::GetApplicationEnvironment();
+        if (!applicationEnvironment.Common.IsOneboxEnvironment)
+        {
+            showCode = false;
+            ViewCodeToggle.toggleValue(showCode);
+            ViewCodeToggle.visible(false);
+        }
+
+        ARBAOTObjectTree::updateProvider(showCode);
+
+        ResourceImage.imageLocation(SysImageLocation::AOTResource);
+        ResourceImageGroup.colorScheme(FormColorScheme::RGB);
+        ResourceImageGroup.backgroundColor(WinAPI::RGB2int(220,220,220));
+
         Args args = element.args();
+
+        FormRun caller = element.args().caller();
+
+        if (caller != null)
+        {
+            switch (caller.name())
+            {
+                case formStr(FormControlPersonalization):
+                    args.parmEnumType(enumNum(ARBAOTObjectType));
+                    args.parmEnum(ARBAOTObjectType::Form);
+                    args.parm(caller.args().caller().name());
+                    args.parmObject(caller.args().parmObject());
+                    break;
+
+                case formStr(DMFEntity):
+                    FormDataSource datasource = caller.dataSource(formDataSourceStr(DMFEntity, DMFEntity)) as FormDataSource;
+                    DMFEntity entity = datasource.cursor();
+
+                    args.parmEnumType(enumNum(ARBAOTObjectType));
+                    args.parmEnum(ARBAOTObjectType::DataEntity);
+                    args.parm(entity.TargetEntity);
+                    break;
+            }
+        }
 
         if (args.parmEnumType() == enumNum(ARBAOTObjectType) && args.parm() != null)
         {
@@ -1096,6 +712,77 @@ public class ARBAOTBrowser extends FormRun
 				</Methods>
 				<Fields />
 			</DataSource>
+			<DataSource>
+				<Name>ARBAOTObjectProperties</Name>
+				<Methods>
+					<Method>
+						<Name>displayOption</Name>
+						<Source><![CDATA[
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name = "_record"></param>
+        /// <param name = "_options"></param>
+        public void displayOption(Common _record, FormRowDisplayOption _options)
+        {
+            ARBAOTObjectProperties property = _record;
+            if (property.Modified)
+            {
+                _options.fontBold(true);
+            }
+
+            super(_record, _options);
+        }
+
+]]></Source>
+					</Method>
+				</Methods>
+				<Fields />
+			</DataSource>
+			<DataSource>
+				<Name>ARBAOTObjectPropertiesMatrix</Name>
+				<Methods>
+					<Method>
+						<Name>displayOption</Name>
+						<Source><![CDATA[
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name = "_record"></param>
+        /// <param name = "_options"></param>
+        public void displayOption(Common _record, FormRowDisplayOption _options)
+        {
+            ARBAOTObjectPropertiesMatrix property = _record;
+            if (property.Modified)
+            {
+                _options.fontBold(true);
+            }
+            else
+            {
+                boolean needBold = false;
+                for (int i = 1; i <= 100; i++)
+                {
+                    if (property.PropertyModified[i])
+                    {
+                        _options.affectedElementsByControl(matrixControlMap.lookup(strFmt('%1;%2', fieldNum(ARBAOTObjectPropertiesMatrix, Property), i)));
+                        needBold = true;
+                    }
+                }
+                if (needBold)
+                {
+                    _options.affectedElementsByControl(matrixControlMap.lookup(strFmt('%1;%2', fieldNum(ARBAOTObjectPropertiesMatrix, TypeName), 0)));
+                    _options.fontBold(true);
+                }
+            }
+
+            super(_record, _options);
+        }
+
+]]></Source>
+					</Method>
+				</Methods>
+				<Fields />
+			</DataSource>
 		</DataSources>
 		<DataControls xmlns="">
 			<Control>
@@ -1115,8 +802,80 @@ public class ARBAOTBrowser extends FormRun
             SysTableBrowser sysTableBrowser;
             
             sysTableBrowser = new SysTableBrowser();
-            sysTableBrowser.parmTableName(ARBAOTObjects.Name);
-            sysTableBrowser.run(tablename2id(ARBAOTObjects.Name));
+            Args args = element.args();
+            TableName tableName;
+            if (args.parmEnumType() == enumNum(ARBAOTObjectType) && args.parm() != null)
+            {
+                tableName = args.parm();
+            }
+            else
+            {
+                tableName = ARBAOTObjects.Name;
+            }
+
+            sysTableBrowser.parmTableName(tableName);
+            sysTableBrowser.run(tablename2id(tableName));
+        }
+
+]]></Source>
+					</Method>
+				</Methods>
+			</Control>
+			<Control>
+				<Name>ExtensionViewToggle</Name>
+				<Type>Button</Type>
+				<Methods>
+					<Method>
+						<Name>clicked</Name>
+						<Source><![CDATA[
+        /// <summary>
+        ///
+        /// </summary>
+        public void clicked()
+        {
+            super();
+
+            Args args = element.args();
+            if (args.parmEnumType() == enumNum(ARBAOTObjectType) && args.parm() != null)
+            {
+                element.updateControls(args.parmEnum(), args.parm());
+            }
+            else
+            {
+                element.updateControlsFromTable();
+            }
+        }
+
+]]></Source>
+					</Method>
+				</Methods>
+			</Control>
+			<Control>
+				<Name>ViewCodeToggle</Name>
+				<Type>Button</Type>
+				<Methods>
+					<Method>
+						<Name>clicked</Name>
+						<Source><![CDATA[
+        /// <summary>
+        ///
+        /// </summary>
+        public void clicked()
+        {
+            super();
+
+            showCode = this.toggleValue();
+            ARBAOTObjectTree::updateProvider(showCode);
+
+            Args args = element.args();
+            if (args.parmEnumType() == enumNum(ARBAOTObjectType) && args.parm() != null)
+            {
+                element.updateControls(args.parmEnum(), args.parm());
+            }
+            else
+            {
+                element.updateControlsFromTable();
+            }
         }
 
 ]]></Source>
@@ -1158,7 +917,7 @@ public class ARBAOTBrowser extends FormRun
 				</Methods>
 			</Control>
 			<Control>
-				<Name>TableTree</Name>
+				<Name>ObjectTree</Name>
 				<Type>Tree</Type>
 				<Methods>
 					<Method>
@@ -1200,62 +959,62 @@ public class ARBAOTBrowser extends FormRun
 
             switch(ARBAOTObjectProperties.Name)
             {
-                case 'Table':
-                case 'RelatedTable':
+                case ARBAOTBrowserConstants::Table:
+                case ARBAOTBrowserConstants::RelatedTable:
                     args.parmEnum(ARBAOTObjectType::Table);
                     args.parm(this.valueStr());
                     new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     break;
 
-                case 'ExtendedDataType':
+                case ARBAOTBrowserConstants::ExtendedDataType:
                     args.parmEnum(ARBAOTObjectType::ExtendedDataType);
                     args.parm(this.valueStr());
                     new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     break;
 
-                case 'EnumType':
+                case ARBAOTBrowserConstants::EnumType:
                     args.parmEnum(ARBAOTObjectType::BaseEnum);
                     args.parm(this.valueStr());
                     new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     break;
 
-                case 'Tile':
+                case ARBAOTBrowserConstants::Tile:
                     args.parmEnum(ARBAOTObjectType::Tile);
                     args.parm(this.valueStr());
                     new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     break;
 
-                case 'DataEntity':
+                case ARBAOTBrowserConstants::DataEntity:
                     args.parmEnum(ARBAOTObjectType::DataEntity);
                     args.parm(this.valueStr());
                     new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     break;
 
-                case 'Object':
-                case 'ObjectName':
+                case ARBAOTBrowserConstants::Object:
+                case ARBAOTBrowserConstants::ObjectName:
                     props.setTmpData(ARBAOTObjectProperties);
                     select firstOnly props
-                        where props.Name == 'ObjectType';
+                        where props.Name == ARBAOTBrowserConstants::ObjectType;
                     if (props)
                     {
                         switch (props.Value)
                         {
-                            case 'Form':
+                            case ARBAOTBrowserConstants::Form:
                                 args.parmEnum(ARBAOTObjectType::Form);
                                 break;
-                            case 'Class':
+                            case ARBAOTBrowserConstants::ClassStr:
                                 args.parmEnum(ARBAOTObjectType::Class);
                                 break;
-                            case 'Query':
+                            case ARBAOTBrowserConstants::Query:
                                 args.parmEnum(ARBAOTObjectType::Query);
                                 break;
-                            case 'MenuItemAction':
+                            case ARBAOTBrowserConstants::MenuItemAction:
                                 args.parmEnum(ARBAOTObjectType::MenuItemAction);
                                 break;
-                            case 'MenuItemDisplay':
+                            case ARBAOTBrowserConstants::MenuItemDisplay:
                                 args.parmEnum(ARBAOTObjectType::MenuItemDisplay);
                                 break;
-                            case 'MenuItemOutput':
+                            case ARBAOTBrowserConstants::MenuItemOutput:
                                 args.parmEnum(ARBAOTObjectType::MenuItemOutput);
                                 break;
                         }
@@ -1264,9 +1023,9 @@ public class ARBAOTBrowser extends FormRun
                     }
                     break;
 
-                case 'Extends':
+                case ARBAOTBrowserConstants::ExtendsStr:
                     select firstOnly props
-                        where props.Name == 'SupportInheritance';
+                        where props.Name == ARBAOTBrowserConstants::SupportInheritance;
                     if (props)
                     {
                         args.parmEnum(ARBAOTObjectType::Table);
@@ -1281,21 +1040,21 @@ public class ARBAOTBrowser extends FormRun
                     }
                     break;
 
-                case 'MenuItemName':
+                case ARBAOTBrowserConstants::MenuItemName:
                     props.setTmpData(ARBAOTObjectProperties);
                     select firstOnly props
-                        where props.Name == 'MenuItemType';
+                        where props.Name == ARBAOTBrowserConstants::MenuItemType;
                     if (props)
                     {
                         switch (props.Value)
                         {
-                            case 'Display':
+                            case ARBAOTBrowserConstants::DisplayStr:
                                 args.parmEnum(ARBAOTObjectType::MenuItemDisplay);
                                 break;
-                            case 'Action':
+                            case ARBAOTBrowserConstants::Action:
                                 args.parmEnum(ARBAOTObjectType::MenuItemAction);
                                 break;
-                            case 'Output':
+                            case ARBAOTBrowserConstants::Output:
                                 args.parmEnum(ARBAOTObjectType::MenuItemOutput);
                                 break;
                         }
@@ -1630,6 +1389,7 @@ public class ARBAOTBrowser extends FormRun
 		<ShowDeleteButton xmlns="">No</ShowDeleteButton>
 		<ShowNewButton xmlns="">No</ShowNewButton>
 		<Style xmlns="">SimpleListDetails</Style>
+		<ViewEditMode xmlns="">View</ViewEditMode>
 		<Controls xmlns="">
 			<AxFormControl xmlns=""
 				i:type="AxFormActionPaneControl">
@@ -1662,6 +1422,27 @@ public class ARBAOTBrowser extends FormRun
 								<FormControlExtension
 									i:nil="true" />
 								<Text>@AOTBrowser:OpenTableBrowserButton</Text>
+							</AxFormControl>
+							<AxFormControl xmlns=""
+								i:type="AxFormButtonControl">
+								<Name>ExtensionViewToggle</Name>
+								<AutoDeclaration>Yes</AutoDeclaration>
+								<Type>Button</Type>
+								<FormControlExtension
+									i:nil="true" />
+								<Text>@AOTBrowser:ViewExtensionsInline</Text>
+								<ToggleButton>Check</ToggleButton>
+							</AxFormControl>
+							<AxFormControl xmlns=""
+								i:type="AxFormButtonControl">
+								<Name>ViewCodeToggle</Name>
+								<AutoDeclaration>Yes</AutoDeclaration>
+								<HelpText>@AOTBrowser:ViewCodeHelp</HelpText>
+								<Type>Button</Type>
+								<FormControlExtension
+									i:nil="true" />
+								<Text>@AOTBrowser:ViewCode</Text>
+								<ToggleButton>Check</ToggleButton>
 							</AxFormControl>
 						</Controls>
 						<Caption>General</Caption>
@@ -1792,7 +1573,7 @@ public class ARBAOTBrowser extends FormRun
 				<Controls>
 					<AxFormControl xmlns=""
 						i:type="AxFormTabPageControl">
-						<Name>TableTab</Name>
+						<Name>DetailsTab</Name>
 						<AutoDeclaration>Yes</AutoDeclaration>
 						<Pattern>NestedSimpleListDetails</Pattern>
 						<PatternVersion>UX7 1.1</PatternVersion>
@@ -1802,7 +1583,7 @@ public class ARBAOTBrowser extends FormRun
 						<Controls>
 							<AxFormControl xmlns=""
 								i:type="AxFormGroupControl">
-								<Name>TableBodyGroup</Name>
+								<Name>DetailsBodyGroup</Name>
 								<AutoDeclaration>Yes</AutoDeclaration>
 								<HeightMode>SizeToAvailable</HeightMode>
 								<Type>Group</Type>
@@ -1812,7 +1593,7 @@ public class ARBAOTBrowser extends FormRun
 								<Controls>
 									<AxFormControl xmlns=""
 										i:type="AxFormGroupControl">
-										<Name>TableNavigationList</Name>
+										<Name>DetailsNavigationList</Name>
 										<HeightMode>SizeToAvailable</HeightMode>
 										<Type>Group</Type>
 										<FormControlExtension
@@ -1820,7 +1601,7 @@ public class ARBAOTBrowser extends FormRun
 										<Controls>
 											<AxFormControl xmlns=""
 												i:type="AxFormTreeControl">
-												<Name>TableTree</Name>
+												<Name>ObjectTree</Name>
 												<AutoDeclaration>Yes</AutoDeclaration>
 												<HeightMode>SizeToAvailable</HeightMode>
 												<Type>Tree</Type>
@@ -1832,7 +1613,7 @@ public class ARBAOTBrowser extends FormRun
 									</AxFormControl>
 									<AxFormControl xmlns=""
 										i:type="AxFormGroupControl">
-										<Name>TableDetailsGroup</Name>
+										<Name>DetailsDetailsGroup</Name>
 										<AutoDeclaration>Yes</AutoDeclaration>
 										<HeightMode>SizeToAvailable</HeightMode>
 										<Type>Group</Type>
@@ -1842,7 +1623,7 @@ public class ARBAOTBrowser extends FormRun
 										<Controls>
 											<AxFormControl xmlns=""
 												i:type="AxFormGroupControl">
-												<Name>TableDetailsHeader</Name>
+												<Name>DetailsDetailsHeader</Name>
 												<Type>Group</Type>
 												<WidthMode>SizeToAvailable</WidthMode>
 												<FormControlExtension
@@ -1853,7 +1634,7 @@ public class ARBAOTBrowser extends FormRun
 											</AxFormControl>
 											<AxFormControl xmlns=""
 												i:type="AxFormGroupControl">
-												<Name>TableDetailsPropertiesGroup</Name>
+												<Name>DetailsDetailsPropertiesGroup</Name>
 												<AllowEdit>No</AllowEdit>
 												<AutoDeclaration>Yes</AutoDeclaration>
 												<Pattern>Custom</Pattern>
@@ -1863,35 +1644,47 @@ public class ARBAOTBrowser extends FormRun
 													i:nil="true" />
 												<Controls>
 													<AxFormControl xmlns=""
-														i:type="AxFormGridControl">
-														<Name>PropertiesGrid</Name>
-														<AutoDeclaration>Yes</AutoDeclaration>
-														<HeightMode>SizeToContent</HeightMode>
-														<Type>Grid</Type>
-														<WidthMode>SizeToContent</WidthMode>
+														i:type="AxFormGroupControl">
+														<Name>PropertiesGridGroup</Name>
+														<HeightMode>SizeToAvailable</HeightMode>
+														<Type>Group</Type>
+														<Width>500</Width>
 														<FormControlExtension
 															i:nil="true" />
 														<Controls>
 															<AxFormControl xmlns=""
-																i:type="AxFormStringControl">
-																<Name>ACMAOTObjectProperties_Name</Name>
-																<Type>String</Type>
+																i:type="AxFormGridControl">
+																<Name>PropertiesGrid</Name>
+																<AutoDeclaration>Yes</AutoDeclaration>
+																<Type>Grid</Type>
+																<Width>225</Width>
 																<FormControlExtension
 																	i:nil="true" />
-																<DataField>Name</DataField>
+																<Controls>
+																	<AxFormControl xmlns=""
+																		i:type="AxFormStringControl">
+																		<Name>ACMAOTObjectProperties_Name</Name>
+																		<Type>String</Type>
+																		<FormControlExtension
+																			i:nil="true" />
+																		<DataField>Name</DataField>
+																		<DataSource>ARBAOTObjectProperties</DataSource>
+																	</AxFormControl>
+																	<AxFormControl xmlns=""
+																		i:type="AxFormStringControl">
+																		<Name>ACMAOTObjectProperties_Value</Name>
+																		<Type>String</Type>
+																		<FormControlExtension
+																			i:nil="true" />
+																		<DataField>Value</DataField>
+																		<DataSource>ARBAOTObjectProperties</DataSource>
+																	</AxFormControl>
+																</Controls>
 																<DataSource>ARBAOTObjectProperties</DataSource>
-															</AxFormControl>
-															<AxFormControl xmlns=""
-																i:type="AxFormStringControl">
-																<Name>ACMAOTObjectProperties_Value</Name>
-																<Type>String</Type>
-																<FormControlExtension
-																	i:nil="true" />
-																<DataField>Value</DataField>
-																<DataSource>ARBAOTObjectProperties</DataSource>
+																<MultiSelect>No</MultiSelect>
+																<Style>SimpleReadOnly</Style>
 															</AxFormControl>
 														</Controls>
-														<DataSource>ARBAOTObjectProperties</DataSource>
 													</AxFormControl>
 													<AxFormControl xmlns=""
 														i:type="AxFormGroupControl">
@@ -1917,8 +1710,39 @@ public class ARBAOTBrowser extends FormRun
 														</Controls>
 														<Caption>@SYS58650</Caption>
 													</AxFormControl>
+													<AxFormControl xmlns=""
+														i:type="AxFormGroupControl">
+														<Name>CodeViewerGroup</Name>
+														<AutoDeclaration>Yes</AutoDeclaration>
+														<HeightMode>SizeToAvailable</HeightMode>
+														<Type>Group</Type>
+														<WidthMode>SizeToAvailable</WidthMode>
+														<FormControlExtension
+															i:nil="true" />
+														<Controls>
+															<AxFormControl>
+																<Name>CodeViewer</Name>
+																<AutoDeclaration>Yes</AutoDeclaration>
+																<HeightMode>SizeToAvailable</HeightMode>
+																<WidthMode>SizeToAvailable</WidthMode>
+																<FormControlExtension>
+																	<Name>HtmlViewerControl</Name>
+																	<ExtensionComponents />
+																	<ExtensionProperties>
+																		<AxFormControlExtensionProperty>
+																			<Name>htmlField</Name>
+																			<Type>String</Type>
+																		</AxFormControlExtensionProperty>
+																	</ExtensionProperties>
+																</FormControlExtension>
+															</AxFormControl>
+														</Controls>
+														<ColumnsMode>Fill</ColumnsMode>
+														<HideIfEmpty>No</HideIfEmpty>
+													</AxFormControl>
 												</Controls>
-												<ColumnsMode>Fill</ColumnsMode>
+												<ArrangeMethod>Auto</ArrangeMethod>
+												<Columns>2</Columns>
 												<FrameType>None</FrameType>
 											</AxFormControl>
 										</Controls>
@@ -1929,7 +1753,7 @@ public class ARBAOTBrowser extends FormRun
 								<FrameType>None</FrameType>
 							</AxFormControl>
 						</Controls>
-						<Caption>@AOTBrowser:Object</Caption>
+						<Caption>@SYS8811</Caption>
 						<FastTabExpanded>Always</FastTabExpanded>
 					</AxFormControl>
 				</Controls>

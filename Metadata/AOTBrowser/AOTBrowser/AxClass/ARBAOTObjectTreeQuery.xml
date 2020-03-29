@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AxClass xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+	<Name>ARBAOTObjectTreeQuery</Name>
+	<SourceCode>
+		<Declaration><![CDATA[
+using Xpp = Microsoft.Dynamics.Ax.Xpp;
+using Microsoft.Dynamics.AX.Metadata.MetaModel;
+
+/// <summary>
+/// Override the Object Tree for Queries
+/// </summary>
+[ARBAOTObjectType(ARBAOTObjectType::Query)]
+class ARBAOTObjectTreeQuery extends ARBAOTObjectTree
+{
+    Map dataSourceMap = new Map(Types::String, Types::Integer);
+    Map currentDsMap;
+    Map rangesMap = new Map(Types::String, Types::Integer);
+    Map currentRangesMap;
+    str currentDatasource;
+
+}
+]]></Declaration>
+		<Methods>
+			<Method>
+				<Name>addExtensionCollection</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a collection of extensions to the tree
+    /// </summary>
+    /// <param name = "_collection">The collection to add</param>
+    /// <param name = "_collectionName">The collection name</param>
+    /// <param name = "_extensionName">The extension name</param>
+    protected void addExtensionCollection(System.Collections.IEnumerable _collection, str _collectionName, str _extensionName)
+    {
+        System.Collections.IEnumerator modsEnum;
+        switch (_collectionName)
+        {
+            case ARBAOTBrowserConstants::RootDataSources:
+                modsEnum = _collection.GetEnumerator();
+                if (collectionMap.exists(ARBAOTBrowserConstants::DataSources))
+                {
+                    Map fieldGroupsMap = collectionMap.lookup(ARBAOTBrowserConstants::DataSources);
+                    TreeItemIdx rootNodeIdx = fieldGroupsMap.lookup(ARBAOTBrowserConstants::RootNode);
+                    while (modsEnum.MoveNext())
+                    {
+                        this.addExtension(modsEnum.Current, rootNodeIdx, _extensionName);
+                    }
+                }
+                break;
+            case ARBAOTBrowserConstants::DataSources:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxQueryExtensionEmbeddedDataSource ds = modsEnum.Current;
+                    this.addExtension(ds.DataSource, this.getNamedNode(dataSourceMap.lookup(ds.Parent), ARBAOTBrowserConstants::DataSources), _extensionName);
+                }
+                break;
+            case ARBAOTBrowserConstants::Ranges:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxQueryExtensionQueryDataSourceRange range = modsEnum.Current;
+                    this.addExtension(range.QueryDataSourceRange, this.getNamedNode(dataSourceMap.lookup(range.Parent), ARBAOTBrowserConstants::Ranges), _extensionName);
+                }
+                break;
+            case ARBAOTBrowserConstants::Relations:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxQueryExtensionQueryDataSourceRelation relation = modsEnum.Current;
+                    this.addExtension(relation.QueryDataSourceRelation, this.getNamedNode(dataSourceMap.lookup(relation.Parent), ARBAOTBrowserConstants::Relations), _extensionName);
+                }
+                break;
+            case ARBAOTBrowserConstants::Fields:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxQueryExtensionQueryDataSourceField field = modsEnum.Current;
+                    this.addExtension(field.QueryDataSourceField, this.getNamedNode(dataSourceMap.lookup(field.Parent), ARBAOTBrowserConstants::Fields), _extensionName);
+                }
+                break;
+            case ARBAOTBrowserConstants::OrderByFields:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxQueryExtensionQueryOrderByField field = modsEnum.Current;
+                    this.addExtension(field.QueryOrderByField, this.getNamedNode(dataSourceMap.lookup(field.Parent), ARBAOTBrowserConstants::OrderBy), _extensionName);
+                }
+                break;
+            default:
+                super(_collection, _collectionName, _extensionName);
+                break;
+        }
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>addTreeNode</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a new node to the tree
+    /// </summary>
+    /// <param name = "_object">The object to add</param>
+    /// <param name = "_idx">The tree index to add it under</param>
+    /// <param name = "_formTreeAdd">The order it should add the node</param>
+    /// <param name = "extensionName">The name of the extension it came from, if any</param>
+    /// <returns>The tree index of the new node</returns>
+    public TreeItemIdx addTreeNode(anytype _object, TreeItemIdx _idx, int _formTreeAdd = FormTreeAdd::Sort, boolean _skipAddHeader = false, str _extensionName = '')
+    {
+        if (_object == null)
+        {
+            return 0;
+        }
+
+        str objectName = this.getObjectName(_object);
+        boolean insertIntoMap = false;
+        if (_object is AxQuerySimpleRootDataSource)
+        {
+            insertIntoMap = true;
+            currentDsMap = dataSourceMap;
+        }
+
+        boolean insertIntoRangeMap = false;
+        if (_object is AxQuerySimpleDataSource)
+        {
+            insertIntoRangeMap = true;
+            currentRangesMap = rangesMap;
+            collectionMap.insert(ARBAOTBrowserConstants::Ranges, rangesMap);
+            currentDatasource = objectName;
+        }
+
+        TreeItemIdx parentIdx;
+        if (_object is AxQuerySimpleDataSourceRelation)
+        {
+            AxQuerySimpleDataSourceRelation relation = _object as AxQuerySimpleDataSourceRelation;
+            str name;
+            if (relation.JoinRelationName)
+            {
+                name = relation.JoinRelationName;
+            }
+            else
+            {
+                name = strFmt('%1.%2 == %3.%4', relation.JoinDataSource, relation.Field, currentDatasource, relation.RelatedField);
+            }
+            parentIdx = SysFormTreeControl::addTreeItem(treeControl, name + (_extensionName == '' ? '' : ' (' + _extensionName + ')'), _idx, _object, 0, false, 0, _formTreeAdd);
+        }
+        else
+        {
+            parentIdx = super(_object, _idx, _formTreeAdd, _skipAddHeader, _extensionName);
+        }
+
+        if (currentDsMap != null
+            && (_object is AxQuerySimpleDataSource))
+        {
+            currentDsMap.insert(objectName, parentIdx);
+        }
+
+        if (insertIntoMap)
+        {
+            currentDsMap = null;
+        }
+
+        if (currentRangesMap != null
+            && (_object is AxQuerySimpleDataSourceRange))
+        {
+            currentRangesMap.insert(objectName, parentIdx);
+        }
+
+        if (insertIntoRangeMap)
+        {
+            currentRangesMap = null;
+        }
+
+        return parentIdx;
+    }
+
+]]></Source>
+			</Method>
+		</Methods>
+	</SourceCode>
+</AxClass>

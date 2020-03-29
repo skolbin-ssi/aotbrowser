@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AxClass xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+	<Name>ARBAOTObjectTreeMenu</Name>
+	<SourceCode>
+		<Declaration><![CDATA[
+using Xpp = Microsoft.Dynamics.Ax.Xpp;
+using ArbelaXpp = Arbela.Dynamics.Ax.Xpp;
+using Microsoft.Dynamics.AX.Metadata.MetaModel;
+using CoreMetaModel = Microsoft.Dynamics.AX.Metadata.Core.MetaModel;
+
+/// <summary>
+/// Override the Object Tree for Views
+/// </summary>
+[ARBAOTObjectType(ARBAOTObjectType::Menu)]
+class ARBAOTObjectTreeMenu extends ARBAOTObjectTree
+{
+    Map elementMap = new Map(Types::String, Types::Integer);
+    Map currentElementMap;
+
+}
+]]></Declaration>
+		<Methods>
+			<Method>
+				<Name>addExtensionCollection</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a collection of extensions to the tree
+    /// </summary>
+    /// <param name = "_collection">The collection to add</param>
+    /// <param name = "_collectionName">The collection name</param>
+    /// <param name = "_extensionName">The extension name</param>
+    protected void addExtensionCollection(System.Collections.IEnumerable _collection, str _collectionName, str _extensionName)
+    {
+        System.Collections.IEnumerator modsEnum;
+        switch (_collectionName)
+        {
+            case ARBAOTBrowserConstants::Elements:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxMenuExtensionElement menuExt = modsEnum.Current;
+                    TreeItemIdx parentIdx;
+                    if (menuExt.Parent == '')
+                    {
+                        parentIdx = treeControl.getRoot();
+                    }
+                    else
+                    {
+                        parentIdx = elementMap.lookup(menuExt.Parent);
+                    }
+                    TreeItemIdx afterIdx;
+                    if (menuExt.PositionType == CoreMetaModel.ExtensionItemPositionType::AfterItem)
+                    {
+                        afterIdx = SysFormTreeControl::findInsertAfterIdx(treeControl, parentIdx, menuExt.PreviousSibling);
+                    }
+                    this.addExtension(menuExt.MenuElement, parentIdx, _extensionName, menuExt.PositionType, afterIdx);
+                }
+                break;
+            default:
+                super(_collection, _collectionName, _extensionName);
+                break;
+        }
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>addTreeNode</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a new node to the tree
+    /// </summary>
+    /// <param name = "_object">The object to add</param>
+    /// <param name = "_idx">The tree index to add it under</param>
+    /// <param name = "_formTreeAdd">The order it should add the node</param>
+    /// <param name = "extensionName">The name of the extension it came from, if any</param>
+    /// <returns>The tree index of the new node</returns>
+    public TreeItemIdx addTreeNode(anytype _object, TreeItemIdx _idx, int _formTreeAdd = FormTreeAdd::Sort, boolean _skipAddHeader = false, str _extensionName = '')
+    {
+        if (_object == null)
+        {
+            return 0;
+        }
+
+        str objectName = this.getObjectName(_object);
+        boolean insertIntoMap = false;
+        if (_object is AxMenu)
+        {
+            insertIntoMap = true;
+            currentElementMap = elementMap;
+            collectionMap.insert(ARBAOTBrowserConstants::MenuElements, elementMap);
+
+            // For Menu's don't sort, but display in designed order
+            _formTreeAdd = FormTreeAdd::Last;
+        }
+
+        TreeItemIdx parentIdx = super(_object, _idx, _formTreeAdd, _skipAddHeader, _extensionName);
+
+        if (currentElementMap != null
+            && (_object is AxMenuElement))
+        {
+            currentElementMap.insert(objectName, parentIdx);
+        }
+
+        if (insertIntoMap)
+        {
+            currentElementMap = null;
+        }
+
+        return parentIdx;
+    }
+
+]]></Source>
+			</Method>
+		</Methods>
+	</SourceCode>
+</AxClass>

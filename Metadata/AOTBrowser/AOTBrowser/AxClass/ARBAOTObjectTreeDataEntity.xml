@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AxClass xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+	<Name>ARBAOTObjectTreeDataEntity</Name>
+	<SourceCode>
+		<Declaration><![CDATA[
+using Xpp = Microsoft.Dynamics.Ax.Xpp;
+using ArbelaXpp = Arbela.Dynamics.Ax.Xpp;
+using Microsoft.Dynamics.AX.Metadata.MetaModel;
+
+/// <summary>
+/// Override the Object Tree for Views
+/// </summary>
+[ARBAOTObjectType(ARBAOTObjectType::DataEntity)]
+class ARBAOTObjectTreeDataEntity extends ARBAOTObjectTree
+{
+    Map dataSourceMap = new Map(Types::String, Types::Integer);
+    Map currentDsMap;
+    str dataEntityName;
+    str currentDatasource;
+
+}
+]]></Declaration>
+		<Methods>
+			<Method>
+				<Name>update</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Update the object tree
+    /// </summary>
+    /// <param name = "_aotNodeName">The name of the AOT object</param>
+    public void update(TreeNodeName _aotNodeName)
+    {
+        dataEntityName = _aotNodeName;
+        collectionMap.insert(ARBAOTBrowserConstants::DataSources, dataSourceMap);
+        super(_aotNodeName);
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>addExtensionCollection</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a collection of extensions to the tree
+    /// </summary>
+    /// <param name = "_collection">The collection to add</param>
+    /// <param name = "_collectionName">The collection name</param>
+    /// <param name = "_extensionName">The extension name</param>
+    protected void addExtensionCollection(System.Collections.IEnumerable _collection, str _collectionName, str _extensionName)
+    {
+        System.Collections.IEnumerator modsEnum;
+        switch (_collectionName)
+        {
+            case ARBAOTBrowserConstants::DataSources:
+                modsEnum = _collection.GetEnumerator();
+                while (modsEnum.MoveNext())
+                {
+                    AxQueryExtensionEmbeddedDataSource ds = modsEnum.Current;
+                    this.addExtension(ds.DataSource, this.getNamedNode(dataSourceMap.lookup(ds.Parent), ARBAOTBrowserConstants::DataSources), _extensionName);
+                }
+                break;
+            case ARBAOTBrowserConstants::FieldGroupExtensions:
+                System.Collections.IEnumerator fieldGroupEnum = _collection.GetEnumerator();
+                if (collectionMap.exists(ARBAOTBrowserConstants::FieldGroups))
+                {
+                    Map fieldGroupsMap = collectionMap.lookup(ARBAOTBrowserConstants::FieldGroups);
+                    while (fieldGroupEnum.MoveNext())
+                    {
+                        AxTableFieldGroupExtension fieldGroupExtension = fieldGroupEnum.Current;
+                        TreeItemIdx parentIdx = fieldGroupsMap.lookup(fieldGroupExtension.Name);
+                        parentIdx = treeControl.getChild(parentIdx); // Get the index of the Fields node
+                        var fieldsEnum = fieldGroupExtension.Fields.GetEnumerator();
+                        while (fieldsEnum.MoveNext())
+                        {
+                            this.addExtension(fieldsEnum.Current, parentIdx, _extensionName);
+                        }
+                    }
+                }
+                break;
+            default:
+                super(_collection, _collectionName, _extensionName);
+                break;
+        }
+    }
+
+]]></Source>
+			</Method>
+			<Method>
+				<Name>addTreeNode</Name>
+				<Source><![CDATA[
+    /// <summary>
+    /// Adds a new node to the tree
+    /// </summary>
+    /// <param name = "_object">The object to add</param>
+    /// <param name = "_idx">The tree index to add it under</param>
+    /// <param name = "_formTreeAdd">The order it should add the node</param>
+    /// <param name = "extensionName">The name of the extension it came from, if any</param>
+    /// <returns>The tree index of the new node</returns>
+    public TreeItemIdx addTreeNode(anytype _object, TreeItemIdx _idx, int _formTreeAdd = FormTreeAdd::Sort, boolean _skipAddHeader = false, str _extensionName = '')
+    {
+        if (_object == null)
+        {
+            return 0;
+        }
+
+        str objectName = this.getObjectName(_object);
+        boolean insertIntoMap = false;
+        if (_object is AxQuerySimpleRootDataSource)
+        {
+            insertIntoMap = true;
+            currentDsMap = dataSourceMap;
+        }
+
+        if (_object is AxQuerySimpleDataSource)
+        {
+            currentDatasource = objectName;
+        }
+
+        TreeItemIdx parentIdx;
+        if (_object is AxDataEntityViewRelation)
+        {
+            AxDataEntityViewRelation relation = _object as AxDataEntityViewRelation;
+            parentIdx = SysFormTreeControl::addTreeItem(treeControl, relation.Name + (_extensionName == '' ? '' : ' (' + _extensionName + ')'), _idx, _object, 0, false, 0, _formTreeAdd);
+            System.Collections.IEnumerator conEnum = relation.Constraints.GetEnumerator();
+            while (conEnum.moveNext())
+            {
+                AxDataEntityViewRelationConstraint constraint = conEnum.Current as AxDataEntityViewRelationConstraint;
+                str name = constraint.Name;
+
+                if (constraint is AxDataEntityViewRelationConstraintField)
+                {
+                    AxDataEntityViewRelationConstraintField constraintField = constraint as AxDataEntityViewRelationConstraintField;
+                    name = strFmt('%1.%2 == %3.%4', dataEntityName, constraintField.Field, relation.RelatedDataEntity, constraintField.RelatedField);
+                }
+                else if (constraint is AxDataEntityViewRelationConstraintFixed)
+                {
+                    AxDataEntityViewRelationConstraintFixed constraintFixed = constraint as AxDataEntityViewRelationConstraintFixed;
+                    name = strFmt('%1.%2 == %3', dataEntityName, constraintFixed.Field, constraintFixed.ValueStr);
+                }
+                else if (constraint is AxDataEntityViewRelationConstraintRelatedFixed)
+                {
+                    AxDataEntityViewRelationConstraintRelatedFixed constraintRelatedFixed = constraint as AxDataEntityViewRelationConstraintRelatedFixed;
+                    name = strFmt('%1 == %2.%3', constraintRelatedFixed.ValueStr, relation.RelatedDataEntity, constraintRelatedFixed.RelatedField);
+                }
+
+                SysFormTreeControl::addTreeItem(treeControl, name + (_extensionName == '' ? '' : ' (' + _extensionName + ')'), parentIdx, constraint, 0, false, 0, FormTreeAdd::Last);
+            }
+        }
+        else if (_object is AxQuerySimpleDataSourceRelation)
+        {
+            AxQuerySimpleDataSourceRelation relation = _object as AxQuerySimpleDataSourceRelation;
+            str name;
+            if (relation.JoinRelationName)
+            {
+                name = relation.JoinRelationName;
+            }
+            else
+            {
+                name = strFmt('%1.%2 == %3.%4', relation.JoinDataSource, relation.Field, currentDatasource, relation.RelatedField);
+            }
+            parentIdx = SysFormTreeControl::addTreeItem(treeControl, name + (_extensionName == '' ? '' : ' (' + _extensionName + ')'), _idx, _object, 0, false, 0, _formTreeAdd);
+        }
+        else
+        {
+            parentIdx = super(_object, _idx, _formTreeAdd, _skipAddHeader, _extensionName);
+        }
+
+        if (currentDsMap != null
+            && (_object is AxQuerySimpleDataSource))
+        {
+            currentDsMap.insert(objectName, parentIdx);
+        }
+
+        if (insertIntoMap)
+        {
+            currentDsMap = null;
+        }
+
+        return parentIdx;
+    }
+
+]]></Source>
+			</Method>
+		</Methods>
+	</SourceCode>
+</AxClass>
