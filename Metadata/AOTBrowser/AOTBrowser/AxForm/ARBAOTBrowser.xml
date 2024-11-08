@@ -24,6 +24,11 @@ public class ARBAOTBrowser extends FormRun
     Map matrixControlMap;
     boolean showCode;
     ARBAOTObjectTree aotObjectTree;
+    str entityFieldName;
+    str selectedTreePath;
+    ARBAOTObjectType currentObjectType;
+    TreeNodeName currentObjectName;
+    anytype selectedObject;
 
     #define.CurrentVersion(2)
     #localmacro.CurrentList
@@ -174,9 +179,13 @@ public class ARBAOTBrowser extends FormRun
 				<Source><![CDATA[
     public void updateControls(ARBAOTObjectType _objectType, TreeNodeName _aotNodeName)
     {
+        currentObjectType = _objectType;
+        currentObjectName = _aotNodeName;
+
         ResourceImageGroup.visible(false);
 
         boolean tableBrowserEnabled = false;
+        boolean menuItemRefEnabled = false;
         switch (_objectType)
         {
             case ARBAOTObjectType::Resource:
@@ -186,6 +195,12 @@ public class ARBAOTBrowser extends FormRun
             case ARBAOTObjectType::Table:
             case ARBAOTObjectType::View:
                 tableBrowserEnabled = true;
+                break;
+            case ARBAOTObjectType::MenuItemAction:
+            case ARBAOTObjectType::MenuItemDisplay:
+            case ARBAOTObjectType::MenuItemOutput:
+                menuItemRefEnabled = true;
+                break;
         }
 
         aotObjectTree = ARBAOTObjectTree::newFromAOTObject(ObjectTree, _objectType, ExtensionViewToggle.toggleValue());
@@ -196,9 +211,26 @@ public class ARBAOTBrowser extends FormRun
             FormControl selectedControl = element.args().parmObject() as FormControl;
             objectTreeForm.parmSelectedControl(selectedControl.name());
         }
+        else if (element.args().parmObject() != null
+                && element.args().parmObject() is FormStringControl)
+        {
+            FormStringControl stringControl = element.args().parmObject() as FormStringControl;
+            aotObjectTree.parmSelectedTreePath('Fields/' + stringControl.valueStr());
+        }
+        else if (entityFieldName != ''
+            && aotObjectTree is ARBAOTObjectTreeDataEntity)
+        {
+            ARBAOTObjectTreeDataEntity objectTreeDataEntity = aotObjectTree as ARBAOTObjectTreeDataEntity;
+            objectTreeDataEntity.parmSelectedField(entityFieldName);
+        }
+        else if (selectedTreePath != '')
+        {
+            aotObjectTree.parmSelectedTreePath(selectedTreePath);
+        }
         aotObjectTree.update(_aotNodeName);
         DetailsTab.caption(_aotNodeName + ' - ' + enum2Str(_objectType));
         ARBOpenTableBrowser.enabled(tableBrowserEnabled);
+        ARBMenuItemReferences.enabled(menuItemRefEnabled);
     }
 
 ]]></Source>
@@ -244,6 +276,7 @@ public class ARBAOTBrowser extends FormRun
 				<Source><![CDATA[
     public void updatePropertiesGroup(anytype _object)
     {
+        selectedObject = _object;
         Map propMap = new Map(Types::String, Types::Integer);
         int nextArrayNum = 1;
         FormStringControl previousControl;
@@ -869,6 +902,26 @@ public class ARBAOTBrowser extends FormRun
                     args.parmEnum(ARBAOTObjectType::DataEntity);
                     args.parm(entity.TargetEntity);
                     break;
+
+                case formStr(ARBEntityFields):
+                    FormDataSource entityFieldsDatasource = caller.dataSource(formDataSourceStr(ARBEntityFields, ARBEntityFields)) as FormDataSource;
+                    ARBEntityFields entityField = entityFieldsDatasource.cursor();
+
+                    args.parmEnumType(enumNum(ARBAOTObjectType));
+                    args.parmEnum(ARBAOTObjectType::DataEntity);
+                    args.parm(entityField.EntityName);
+                    entityFieldName = entityField.EntityFieldName;
+                    break;
+
+                case formStr(ARBMenuItemReferences):
+                    FormDataSource menuItemReferencesDatasource = caller.dataSource(formDataSourceStr(ARBMenuItemReferences, ARBMenuItemReferences)) as FormDataSource;
+                    ARBMenuItemReferences menuItemReference = menuItemReferencesDatasource.cursor();
+
+                    args.parmEnumType(enumNum(ARBAOTObjectType));
+                    args.parmEnum(menuItemReference.RefObjectType);
+                    args.parm(menuItemReference.RefObjectName);
+                    selectedTreePath = menuItemReference.RefPath;
+                    break;
             }
         }
 
@@ -1013,6 +1066,26 @@ public class ARBAOTBrowser extends FormRun
 
             sysTableBrowser.parmTableName(tableName);
             sysTableBrowser.run(tablename2id(tableName));
+        }
+
+]]></Source>
+					</Method>
+				</Methods>
+			</Control>
+			<Control>
+				<Name>ARBMenuItemReferences</Name>
+				<Type>MenuFunctionButton</Type>
+				<Methods>
+					<Method>
+						<Name>clicked</Name>
+						<Source><![CDATA[
+        /// <summary>
+        ///
+        /// </summary>
+        public void clicked()
+        {
+            this.parameters(currentObjectName);
+            super();
         }
 
 ]]></Source>
@@ -1170,6 +1243,12 @@ public class ARBAOTBrowser extends FormRun
                     new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     break;
 
+                case ARBAOTBrowserConstants::Query:
+                    args.parmEnum(ARBAOTObjectType::Query);
+                    args.parm(this.valueStr());
+                    new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
+                    break;
+
                 case ARBAOTBrowserConstants::EnumType:
                     args.parmEnum(ARBAOTObjectType::BaseEnum);
                     args.parm(this.valueStr());
@@ -1257,6 +1336,70 @@ public class ARBAOTBrowser extends FormRun
                                 break;
                         }
                         args.parm(this.valueStr());
+                        new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
+                    }
+                    break;
+
+                case ARBAOTBrowserConstants::DataSource:
+                    str tableName;
+                    switch (currentObjectType)
+                    {
+                        case ARBAOTObjectType::Form:
+                            tableName = ARBAOTBrowserHelper::getFormDatasourceTableName(currentObjectName, this.valueStr());
+                            break;
+
+                        case ARBAOTObjectType::View:
+                            tableName = ARBAOTBrowserHelper::getViewDatasourceTableName(currentObjectName, this.valueStr());
+                            break;
+                    }
+
+                    if (tableName)
+                    {
+                        args.parmEnum(ARBAOTObjectType::Table);
+                        args.parm(tableName);
+                        new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
+                    }
+                    break;
+
+                case ARBAOTBrowserConstants::DataField:
+                    str dataFieldTableName;
+                    System.Type t;
+                    PropertyInfo dataSourceProp;
+                    str datasourceName;
+                    switch (currentObjectType)
+                    {
+                        case ARBAOTObjectType::Form:
+                            t = selectedObject.GetType();
+                            dataSourceProp = t.GetProperty(ARBAOTBrowserConstants::DataSource);
+                            if (dataSourceProp != null)
+                            {
+                                datasourceName = dataSourceProp.GetValue(selectedObject).ToString();
+                            }
+                            if (datasourceName)
+                            {
+                                dataFieldTableName = ARBAOTBrowserHelper::getFormDatasourceTableName(currentObjectName, datasourceName);
+                            }
+                            break;
+
+                        case ARBAOTObjectType::View:
+                            t = selectedObject.GetType();
+                            dataSourceProp = t.GetProperty(ARBAOTBrowserConstants::DataSource);
+                            
+                            if (dataSourceProp != null)
+                            {
+                                datasourceName = dataSourceProp.GetValue(selectedObject).ToString();
+                            }
+                            if (datasourceName)
+                            {
+                                dataFieldTableName = ARBAOTBrowserHelper::getViewDatasourceTableName(currentObjectName, datasourceName);
+                            }
+                            break;
+                    }
+                    if (dataFieldTableName)
+                    {
+                        args.parmEnum(ARBAOTObjectType::Table);
+                        args.parm(dataFieldTableName);
+                        args.parmObject(this);
                         new MenuFunction(menuItemDisplayStr(ARBAOTBrowser), MenuItemType::Display).run(args);
                     }
                     break;
@@ -1623,6 +1766,15 @@ public class ARBAOTBrowser extends FormRun
 								<FormControlExtension
 									i:nil="true" />
 								<Text>@AOTBrowser:OpenTableBrowserButton</Text>
+							</AxFormControl>
+							<AxFormControl xmlns=""
+								i:type="AxFormMenuFunctionButtonControl">
+								<Name>ARBMenuItemReferences</Name>
+								<AutoDeclaration>Yes</AutoDeclaration>
+								<Type>MenuFunctionButton</Type>
+								<FormControlExtension
+									i:nil="true" />
+								<MenuItemName>ARBMenuItemReferences</MenuItemName>
 							</AxFormControl>
 							<AxFormControl xmlns=""
 								i:type="AxFormButtonControl">
